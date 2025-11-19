@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from .models import BacktestRequest
 from .backtest_engine import BacktestEngine
-from .utils import validate_backtest_config
+from .utils import validate_backtest_config, convert_numpy_types
 import uvicorn
 import json
 import os
@@ -137,7 +137,9 @@ async def get_backtest_status(job_id: str):
     # If completed, include summary
     if status == "completed" and job_id in backtest_results:
         results = backtest_results[job_id]
-        response["summary"] = results.get("summary", {})
+        summary = results.get("summary", {})
+        # Convert numpy types to native Python types for JSON serialization
+        response["summary"] = convert_numpy_types(summary)
     
     return response
 
@@ -167,7 +169,9 @@ async def get_backtest_results(job_id: str):
     if job_id not in backtest_results:
         raise HTTPException(status_code=404, detail="Backtest results not found")
     
-    return backtest_results[job_id]
+    # Convert numpy types to native Python types for JSON serialization
+    results = backtest_results[job_id]
+    return convert_numpy_types(results)
 
 
 @app.delete("/backtest_results/{job_id}")
@@ -213,10 +217,13 @@ async def list_backtests():
         
         if status == "completed" and job_id in backtest_results:
             results = backtest_results[job_id]
+            summary = results.get("summary", {})
+            # Convert numpy types to native Python types
+            summary = convert_numpy_types(summary)
             job_info["summary"] = {
-                "total_return": results.get("summary", {}).get("total_return"),
-                "sharpe_ratio": results.get("summary", {}).get("sharpe_ratio"),
-                "num_trades": results.get("summary", {}).get("total_trades")
+                "total_return": summary.get("total_return"),
+                "sharpe_ratio": summary.get("sharpe_ratio"),
+                "num_trades": summary.get("total_trades")
             }
         
         jobs.append(job_info)
@@ -247,6 +254,9 @@ async def execute_backtest(job_id: str, config: Dict, name: str):
         results['job_id'] = job_id
         results['name'] = name
         results['completed_at'] = datetime.now().isoformat()
+        
+        # Convert numpy types to native Python types before storing
+        results = convert_numpy_types(results)
         
         # Store results
         backtest_results[job_id] = results

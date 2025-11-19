@@ -2,9 +2,10 @@
 Utility Functions Module
 Helper functions for calculations and data processing
 """
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
 from datetime import datetime, timedelta
 import logging
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -280,4 +281,34 @@ def apply_borrow_cost(
     annual_cost = abs(position_value) * (borrow_cost / 100)
     daily_cost = annual_cost / 365
     return daily_cost * days_held
+
+
+def convert_numpy_types(obj: Any) -> Any:
+    """
+    Recursively convert numpy types to native Python types for JSON serialization
+    
+    Args:
+        obj: Object that may contain numpy types
+    
+    Returns:
+        Object with numpy types converted to Python types
+    """
+    if isinstance(obj, (np.integer, np.int_, np.intc, np.intp, np.int8,
+                        np.int16, np.int32, np.int64, np.uint8, np.uint16,
+                        np.uint32, np.uint64)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float_, np.float16, np.float32, np.float64)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, (list, tuple)):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, set):
+        return {convert_numpy_types(item) for item in obj}
+    else:
+        return obj
 

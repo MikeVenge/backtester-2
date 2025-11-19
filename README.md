@@ -1,23 +1,85 @@
-# Backtester Rules and Requirements
+# Backtester - Trading Strategy Backtesting System
 
-This document outlines the comprehensive rules and requirements for the backtester system.
+A comprehensive backtesting system with a React frontend and FastAPI backend, designed for testing trading strategies with real market data.
 
-## Quick Start - Frontend UI
+## Project Structure
 
-To run the React frontend application:
+```
+backtester-2/
+├── frontend/          # React frontend (deploy to Vercel)
+│   ├── src/           # React components
+│   ├── package.json    # Frontend dependencies
+│   └── vercel.json     # Vercel deployment config
+├── backend/            # FastAPI backend (deploy to Railway)
+│   ├── main.py         # FastAPI application
+│   ├── requirements.txt # Python dependencies
+│   └── ...
+├── Procfile            # Railway deployment config
+├── railway.json        # Railway configuration
+└── requirements.txt    # Backend dependencies (for Railway)
+```
+
+## Quick Start
+
+### Frontend (Local Development)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173`
+
+### Backend (Local Development)
 
 ```bash
 # Install dependencies
-npm install
+pip install -r backend/requirements.txt
 
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
+# Run the backend
+cd backend
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The application will be available at `http://localhost:5173` (or the port shown in the terminal).
+The backend API will be available at `http://localhost:8000`
+
+### Configure Frontend to Connect to Backend
+
+Create `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+## Deployment
+
+### Backend (Railway)
+
+See `backend/RAILWAY_DEPLOYMENT.md` for detailed instructions.
+
+Quick steps:
+1. Connect GitHub repo to Railway
+2. Set `ALPHAVANTAGE_API_KEY` environment variable
+3. Deploy (Railway auto-detects Python)
+
+### Frontend (Vercel)
+
+See `frontend/README.md` for detailed instructions.
+
+Quick steps:
+1. Connect GitHub repo to Vercel
+2. Set root directory to `frontend`
+3. Set `VITE_API_URL` environment variable to your Railway backend URL
+4. Deploy
+
+## Documentation
+
+- **Frontend**: See `frontend/README.md`
+- **Backend API**: See `backend/API.md`
+- **Backend Deployment**: See `backend/RAILWAY_DEPLOYMENT.md`
+- **Backend Implementation**: See `BACKEND_IMPLEMENTATION_SUMMARY.md`
+- **Backend Specification**: See `BACKEND_SPECIFICATION.md`
 
 The UI provides a tabbed interface where you can configure all backtester parameters across 8 sections:
 1. Market Data

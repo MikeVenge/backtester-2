@@ -20,10 +20,12 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Backtester Backend", version="1.0.0")
 
-# Configure CORS to allow requests from the React frontend
+# Configure CORS - allow requests from frontend
+# In production, set FRONTEND_URL environment variable or use Railway's domain
+frontend_urls = os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=frontend_urls + ["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -263,5 +265,6 @@ async def execute_backtest(job_id: str, config: Dict, name: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port, reload=False)
 

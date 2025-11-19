@@ -113,7 +113,8 @@ function ConfigurationManager({ formData, currentConfigName, onLoadConfiguration
     }
     
     try {
-      const response = await fetch('http://localhost:8000/run_backtest', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/run_backtest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

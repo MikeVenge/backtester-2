@@ -93,7 +93,7 @@ function ConfigurationManager({ formData, currentConfigName, onLoadConfiguration
     }
   }
 
-  const handleRun = () => {
+  const handleRun = async () => {
     // Check if there's any configuration data
     const hasData = Object.keys(formData).length > 0 && 
                     Object.values(formData).some(section => 
@@ -107,14 +107,32 @@ function ConfigurationManager({ formData, currentConfigName, onLoadConfiguration
 
     // Export configuration for running
     const configToRun = {
-      name: 'Current Configuration',
+      name: currentConfigName || 'Unnamed Configuration',
       data: formData,
       timestamp: new Date().toISOString()
     }
     
-    // For now, we'll show an alert. In the future, this can trigger actual backtest execution
-    console.log('Running backtest with configuration:', configToRun)
-    alert(`Backtest configuration is ready to run!\n\nConfiguration data has been logged to console.\n\nIn the future, this will trigger the actual backtest execution.`)
+    try {
+      const response = await fetch('http://localhost:8000/run_backtest', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(configToRun),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || 'Failed to start backtest')
+      }
+
+      const result = await response.json()
+      console.log('Backtest response:', result)
+      alert(`Success! ${result.message}`)
+    } catch (error) {
+      console.error('Error running backtest:', error)
+      alert(`Error running backtest: ${error.message}\n\nMake sure the backend server is running (cd backend && uvicorn main:app --reload)`)
+    }
   }
 
   return (

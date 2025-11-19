@@ -1,0 +1,91 @@
+{
+  "name": "Simple Moving Average Strategy",
+  "timestamp": "2025-11-19T12:00:00Z",
+  "data": {
+    "marketData": {
+      "tickers": "AAPL,MSFT,GOOGL",
+      "fields": ["open", "high", "low", "close", "volume"],
+      "frequency": "daily",
+      "startDate": "2023-01-01",
+      "endDate": "2024-01-01",
+      "includeDividends": true,
+      "includeSplits": true,
+      "includeDelistings": false,
+      "benchmark": "SPY"
+    },
+    "strategy": {
+      "entryLogic": "Buy when 5-day MA crosses above 20-day MA",
+      "entryPromptType": "string",
+      "entryFinChatPrompt": "Buy when 5-day MA crosses above 20-day MA",
+      "exitLogic": "Sell when 5-day MA crosses below 20-day MA",
+      "exitPromptType": "string",
+      "exitFinChatPrompt": "Sell when 5-day MA crosses below 20-day MA",
+      "takeProfit": 10.0,
+      "stopLoss": 5.0,
+      "timeBasedExit": 30,
+      "positionSizingMethod": "portfolio-percent",
+      "portfolioPercent": 10.0,
+      "maxPositions": 3,
+      "eligibleSymbols": "All tickers in universe",
+      "rankingLogic": "Random selection"
+    },
+    "portfolioRisk": {
+      "initialCapital": 100000.0,
+      "leverageAllowed": false,
+      "maxLeverage": 1.0,
+      "maxSingleAssetPercent": 20.0,
+      "maxSectorPercent": 50.0,
+      "maxNetExposure": 100.0,
+      "stopLossType": "fixed-percent",
+      "useTrailingStops": true,
+      "trailingStopDistance": 3.0,
+      "maxDailyDrawdown": 5.0,
+      "maxWeeklyDrawdown": 10.0
+    },
+    "tradingExecution": {
+      "entryTiming": "next-bar-open",
+      "orderType": "market",
+      "commissionType": "per-trade",
+      "commissionAmount": 1.0,
+      "exchangeFees": 0.01,
+      "slippage": 0.05,
+      "tradingDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "handleMissingData": "forward-fill",
+      "shortSellingAllowed": false,
+      "borrowCost": 0.0
+    },
+    "mtm": {
+      "mtmFrequency": "daily",
+      "mtmPrice": "close",
+      "baseCurrency": "USD",
+      "fxFrequency": "daily",
+      "mtmFXSeparately": false,
+      "adjustForSplitsDividends": true,
+      "bookDividendCashflows": true
+    },
+    "rebalancing": {
+      "rebalancingType": "signal-based",
+      "dropDelisted": true,
+      "dropBelowThresholds": false,
+      "exitIneligible": true,
+      "rebalancingMethod": "full",
+      "minShares": 1,
+      "minNotional": 100.0
+    },
+    "output": {
+      "basicMetrics": ["Total Return", "CAGR", "Max Drawdown", "Volatility"],
+      "ratioMetrics": ["Sharpe Ratio", "Sortino Ratio", "Calmar Ratio"],
+      "tradeStats": ["Win Rate", "Average Win/Loss", "Profit Factor", "Average Holding Period"],
+      "outputFormats": ["Equity Curve", "Trade Log"],
+      "benchmarkSymbol": "SPY",
+      "benchmarkMetrics": ["Alpha", "Beta", "Tracking Error"]
+    },
+    "implementation": {
+      "programmingEnv": "python",
+      "dataFormat": "json",
+      "columnNames": "timestamp,open,high,low,close,volume",
+      "dateFormat": "YYYY-MM-DD"
+    }
+  }
+}
+

@@ -293,11 +293,13 @@ def convert_numpy_types(obj: Any) -> Any:
     Returns:
         Object with numpy types converted to Python types
     """
+    # Check for numpy integer types
     if isinstance(obj, (np.integer, np.int_, np.intc, np.intp, np.int8,
                         np.int16, np.int32, np.int64, np.uint8, np.uint16,
                         np.uint32, np.uint64)):
         return int(obj)
-    elif isinstance(obj, (np.floating, np.float_, np.float16, np.float32, np.float64)):
+    # Check for numpy float types (np.float_ removed in NumPy 2.0)
+    elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
         return float(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()

@@ -312,7 +312,7 @@ class DataFetcher:
             return df.dropna()
         elif method == 'forward-fill':
             # Forward fill missing values
-            return df.fillna(method='ffill')
+            return df.ffill()
         elif method == 'interpolate':
             # Linear interpolation
             return df.interpolate(method='linear')

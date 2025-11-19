@@ -265,12 +265,17 @@ async def execute_backtest(job_id: str, config: Dict, name: str):
         logger.info(f"Backtest completed successfully: {job_id}")
         
     except Exception as e:
+        import traceback
+        error_traceback = traceback.format_exc()
         logger.error(f"Backtest failed: {job_id} - {str(e)}", exc_info=True)
         backtest_status[job_id] = "failed"
         backtest_results[job_id] = {
             "status": "failed",
             "error": str(e),
-            "job_id": job_id
+            "error_type": type(e).__name__,
+            "error_traceback": error_traceback,
+            "job_id": job_id,
+            "name": name
         }
 
 

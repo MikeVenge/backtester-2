@@ -144,8 +144,8 @@ class StrategyParser:
                 return cot_cache[cache_key].get("signal", False)
             
             try:
-                # Extract day of month from timestamp
-                day_of_month = timestamp.day
+                # Format date as mm/dd/yyyy for FinChat COT
+                date_str = timestamp.strftime("%m/%d/%Y")
                 
                 # Call FinChat COT with required parameters
                 logger.info(f"Calling FinChat COT {cot_slug} for entry signal: {ticker} at {timestamp}")
@@ -154,7 +154,7 @@ class StrategyParser:
                     ticker=ticker,
                     additional_params={
                         "stock_symbol": ticker,  # Required parameter name
-                        "day_of_month": str(day_of_month)
+                        "date": date_str  # Date in mm/dd/yyyy format
                     }
                 )
                 
@@ -166,9 +166,10 @@ class StrategyParser:
                 
                 # Log detailed information
                 print(f"\n{'='*80}")
-                print(f"ENTRY SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')} (Day {timestamp.day})")
+                print(f"ENTRY SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')} ({date_str})")
                 print(f"{'='*80}")
                 print(f"COT Slug: {cot_slug}")
+                print(f"Parameters: stock_symbol={ticker}, date={date_str}")
                 print(f"Signal: {signal.upper()}")
                 print(f"Confidence: {confidence:.2f}")
                 print(f"\nCOT Response Content:")
@@ -186,7 +187,7 @@ class StrategyParser:
                         "type": "entry",
                         "ticker": ticker,
                         "timestamp": timestamp.isoformat(),
-                        "day_of_month": timestamp.day,
+                        "date": date_str,  # Date in mm/dd/yyyy format
                         "cot_slug": cot_slug,
                         "signal": signal,
                         "confidence": confidence,

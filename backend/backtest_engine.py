@@ -559,17 +559,23 @@ class BacktestEngine:
         current_data: pd.DataFrame
     ):
         """Execute an entry order"""
+        logger.info(f"Attempting to execute entry for {ticker} at {timestamp}")
+        
         # Get ticker data
         if ticker not in current_data.index:
             logger.warning(f"No data for {ticker} at {timestamp}")
             return
         
         ticker_data = current_data.loc[ticker]
+        logger.debug(f"Ticker data for {ticker}: {ticker_data.to_dict()}")
         
         # Get execution price
         entry_price = get_execution_price(ticker_data.to_dict(), self.entry_timing)
         if entry_price is None or entry_price <= 0:
+            logger.warning(f"Invalid entry price for {ticker}: {entry_price}")
             return
+        
+        logger.info(f"Entry price for {ticker}: ${entry_price:.2f}")
         
         # Calculate position size
         shares = self.strategy.calculate_position_size(
@@ -579,7 +585,10 @@ class BacktestEngine:
             self.portfolio.cash
         )
         
+        logger.info(f"Calculated position size for {ticker}: {shares} shares (portfolio_value=${self.portfolio.portfolio_value:,.2f}, cash=${self.portfolio.cash:,.2f})")
+        
         if shares <= 0:
+            logger.warning(f"Position size is 0 or negative for {ticker}. Position sizing method: {self.strategy.position_sizing_method}, portfolio_percent: {self.strategy.portfolio_percent}")
             return
         
         # Calculate total cost including fees
@@ -596,22 +605,29 @@ class BacktestEngine:
         # Check if we can open this position
         can_open, reason = self.portfolio.can_open_position(ticker, total_cost)
         if not can_open:
-            logger.debug(f"Cannot open position in {ticker}: {reason}")
+            logger.warning(f"Cannot open position in {ticker}: {reason} (total_cost=${total_cost:,.2f}, buying_power=${self.portfolio.buying_power:,.2f})")
             return
         
         # Check if we have enough cash/buying power
         if total_cost > self.portfolio.buying_power:
-            logger.debug(f"Insufficient buying power for {ticker}")
+            logger.warning(f"Insufficient buying power for {ticker}: need ${total_cost:,.2f}, have ${self.portfolio.buying_power:,.2f}")
             return
         
+        logger.info(f"Opening position: {ticker} - {shares} shares @ ${execution_price:.2f}, total cost: ${total_cost:,.2f}")
+        
         # Open position
-        self.portfolio.open_position(
+        success = self.portfolio.open_position(
             ticker,
             shares,
             execution_price,
             timestamp,
             total_cost
         )
+        
+        if success:
+            logger.info(f"Successfully opened position: {ticker} - {shares} shares @ ${execution_price:.2f}")
+        else:
+            logger.error(f"Failed to open position: {ticker}")
     
     async def _execute_pending_orders(self, timestamp: datetime, current_data: pd.DataFrame):
         """Execute orders that were pending from previous bar"""

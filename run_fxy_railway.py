@@ -241,6 +241,38 @@ def get_results(job_id):
         print(f"  Win Rate:          {summary.get('win_rate', 0):.2f}%")
         print()
         
+        # Display FinChat signals
+        finchat_signals = results.get('finchat_signals', [])
+        if finchat_signals:
+            print(f"FinChat COT Signals ({len(finchat_signals)} total):")
+            print("-" * 80)
+            for i, signal in enumerate(finchat_signals, 1):
+                signal_type = signal.get('type', 'unknown').upper()
+                ticker = signal.get('ticker', 'N/A')
+                timestamp = signal.get('timestamp', 'N/A')
+                cot_signal = signal.get('signal', 'N/A').upper()
+                confidence = signal.get('confidence', 0)
+                cot_response = signal.get('cot_response', '')[:500]  # First 500 chars
+                
+                print(f"\n  Signal {i} - {signal_type} ({ticker})")
+                print(f"    Date: {timestamp}")
+                print(f"    Signal: {cot_signal}")
+                print(f"    Confidence: {confidence:.2f}")
+                if signal_type == 'ENTRY':
+                    print(f"    Day of Month: {signal.get('day_of_month', 'N/A')}")
+                elif signal_type == 'EXIT':
+                    print(f"    Entry Price: ${signal.get('position_entry_price', 0):.2f}")
+                    print(f"    Yesterday Price: ${signal.get('yesterday_price', 0):.2f}")
+                    print(f"    Today Price: ${signal.get('today_price', 0):.2f}")
+                print(f"    COT Response:")
+                print(f"      {cot_response}")
+                if len(signal.get('cot_response', '')) > 500:
+                    print(f"      ... (truncated)")
+                print()
+        else:
+            print("No FinChat signals recorded.")
+            print()
+        
         # Display all trades
         trades = results.get('trades', [])
         if trades:

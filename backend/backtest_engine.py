@@ -128,7 +128,8 @@ class BacktestEngine:
             entry_finchat_slug=st_config.get('entryFinChatSlug'),
             exit_finchat_slug=st_config.get('exitFinChatSlug'),
             upside_threshold=st_config.get('upsideThreshold'),
-            downside_threshold=st_config.get('downsideThreshold')
+            downside_threshold=st_config.get('downsideThreshold'),
+            signal_tracker=self.finchat_signals
         )
         
         # Store FinChat client for async calls
@@ -181,6 +182,9 @@ class BacktestEngine:
         # Pending orders (for next-bar-open execution)
         self.pending_entry_orders: List[Dict] = []
         self.pending_exit_orders: List[Dict] = []
+        
+        # Track FinChat COT signals for monitoring
+        self.finchat_signals: List[Dict] = []
     
     async def run(self) -> Dict:
         """
@@ -667,7 +671,8 @@ class BacktestEngine:
             'equity_curve': equity_curve,
             'trades': trades,
             'positions': self.portfolio.get_position_summary()['positions'],
-            'benchmark_comparison': metrics.get('benchmark_metrics', {})
+            'benchmark_comparison': metrics.get('benchmark_metrics', {}),
+            'finchat_signals': self.finchat_signals  # Include FinChat COT signals
         }
         
         return results

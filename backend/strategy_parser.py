@@ -14,14 +14,16 @@ logger = logging.getLogger(__name__)
 class StrategyParser:
     """Parses strategy logic strings and FinChat COT prompts into executable functions"""
     
-    def __init__(self, finchat_client=None):
+    def __init__(self, finchat_client=None, signal_tracker=None):
         """
         Initialize strategy parser
         
         Args:
             finchat_client: Optional FinChatClient instance for COT execution
+            signal_tracker: Optional list to track FinChat signals for monitoring
         """
         self.finchat_client = finchat_client
+        self.signal_tracker = signal_tracker  # List to append signals to
         self.backtest_start: Optional[datetime] = None
         self.backtest_end: Optional[datetime] = None
     
@@ -160,6 +162,37 @@ class StrategyParser:
                 parsed = self.finchat_client.parse_cot_result(result["content"])
                 signal = parsed.get("signal", "hold")
                 confidence = parsed.get("confidence", 0.5)
+                reasoning = parsed.get("reasoning", "")
+                
+                # Log detailed information
+                print(f"\n{'='*80}")
+                print(f"ENTRY SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')} (Day {timestamp.day})")
+                print(f"{'='*80}")
+                print(f"COT Slug: {cot_slug}")
+                print(f"Signal: {signal.upper()}")
+                print(f"Confidence: {confidence:.2f}")
+                print(f"\nCOT Response Content:")
+                print(f"{'-'*80}")
+                print(result["content"][:1000])  # First 1000 chars
+                if len(result["content"]) > 1000:
+                    print(f"\n... (truncated, total length: {len(result['content'])} chars)")
+                print(f"{'-'*80}")
+                print(f"Parsed Reasoning: {reasoning[:200]}")
+                print(f"{'='*80}\n")
+                
+                # Track signal for results
+                if self.signal_tracker is not None:
+                    self.signal_tracker.append({
+                        "type": "entry",
+                        "ticker": ticker,
+                        "timestamp": timestamp.isoformat(),
+                        "day_of_month": timestamp.day,
+                        "cot_slug": cot_slug,
+                        "signal": signal,
+                        "confidence": confidence,
+                        "cot_response": result["content"][:2000],  # First 2000 chars
+                        "parsed_reasoning": reasoning[:500]
+                    })
                 
                 logger.info(
                     f"FinChat COT entry result for {ticker}: signal={signal}, "
@@ -271,6 +304,47 @@ class StrategyParser:
                 parsed = self.finchat_client.parse_cot_result(result["content"])
                 signal = parsed.get("signal", "hold")
                 confidence = parsed.get("confidence", 0.5)
+                reasoning = parsed.get("reasoning", "")
+                
+                # Log detailed information
+                print(f"\n{'='*80}")
+                print(f"EXIT SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')}")
+                print(f"{'='*80}")
+                print(f"COT Slug: {cot_slug}")
+                print(f"Position Entry: {position.entry_timestamp.strftime('%Y-%m-%d')} @ ${position.entry_price:.2f}")
+                print(f"Yesterday Price: ${yesterday_price:.2f}")
+                print(f"Today Price: ${todays_price:.2f}")
+                print(f"Upside Threshold: {upside_thresh}%")
+                print(f"Downside Threshold: {downside_thresh}%")
+                print(f"Signal: {signal.upper()}")
+                print(f"Confidence: {confidence:.2f}")
+                print(f"\nCOT Response Content:")
+                print(f"{'-'*80}")
+                print(result["content"][:1000])  # First 1000 chars
+                if len(result["content"]) > 1000:
+                    print(f"\n... (truncated, total length: {len(result['content'])} chars)")
+                print(f"{'-'*80}")
+                print(f"Parsed Reasoning: {reasoning[:200]}")
+                print(f"{'='*80}\n")
+                
+                # Track signal for results
+                if self.signal_tracker is not None:
+                    self.signal_tracker.append({
+                        "type": "exit",
+                        "ticker": ticker,
+                        "timestamp": timestamp.isoformat(),
+                        "cot_slug": cot_slug,
+                        "position_entry_date": position.entry_timestamp.isoformat(),
+                        "position_entry_price": position.entry_price,
+                        "yesterday_price": float(yesterday_price) if yesterday_price else None,
+                        "today_price": float(todays_price),
+                        "upside_threshold": upside_thresh,
+                        "downside_threshold": downside_thresh,
+                        "signal": signal,
+                        "confidence": confidence,
+                        "cot_response": result["content"][:2000],  # First 2000 chars
+                        "parsed_reasoning": reasoning[:500]
+                    })
                 
                 logger.info(
                     f"FinChat COT exit result for {ticker}: signal={signal}, "
@@ -457,7 +531,8 @@ def parse_strategy_logic(
     entry_finchat_slug: Optional[str] = None,
     exit_finchat_slug: Optional[str] = None,
     upside_threshold: Optional[float] = None,
-    downside_threshold: Optional[float] = None
+    downside_threshold: Optional[float] = None,
+    signal_tracker: Optional[List] = None
 ) -> tuple[Optional[Callable], Optional[Callable]]:
     """
     Parse entry and exit logic strings or FinChat COT slugs into executable functions
@@ -476,7 +551,7 @@ def parse_strategy_logic(
     Returns:
         Tuple of (entry_function, exit_function)
     """
-    parser = StrategyParser(finchat_client=finchat_client)
+    parser = StrategyParser(finchat_client=finchat_client, signal_tracker=signal_tracker)
     
     if backtest_start and backtest_end:
         parser.set_backtest_range(backtest_start, backtest_end)

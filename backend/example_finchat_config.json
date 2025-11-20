@@ -1,0 +1,46 @@
+{
+  "marketData": {
+    "tickers": ["IBM"],
+    "startDate": "2024-01-01",
+    "endDate": "2024-12-31",
+    "frequency": "daily",
+    "fields": ["open", "high", "low", "close", "volume", "adjusted_close"]
+  },
+  "strategy": {
+    "entryPromptType": "finchat-slug",
+    "entryFinChatSlug": "conditional-stock-purchase",
+    "exitPromptType": "finchat-slug",
+    "exitFinChatSlug": "conditional-stock-sell-trigger",
+    "upsideThreshold": 10.0,
+    "downsideThreshold": 5.0,
+    "positionSizingMethod": "portfolio-percent",
+    "portfolioPercent": 100.0,
+    "maxPositions": 1,
+    "eligibleSymbols": "IBM"
+  },
+  "portfolioRisk": {
+    "initialCapital": 100000,
+    "leverageAllowed": false,
+    "maxLeverage": 1.0
+  },
+  "tradingExecution": {
+    "entryTiming": "next-bar-open",
+    "commissionType": "per-trade",
+    "commissionAmount": 1.0,
+    "exchangeFees": 0.0,
+    "slippage": 0.0,
+    "tradingDays": [],
+    "handleMissingData": "skip",
+    "shortSellingAllowed": false
+  },
+  "mtm": {
+    "mtmFrequency": "every-bar",
+    "mtmPrice": "close",
+    "bookDividendCashflows": false
+  },
+  "rebalancing": {
+    "rebalancingType": null,
+    "dropDelisted": false
+  }
+}
+

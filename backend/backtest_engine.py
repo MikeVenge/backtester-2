@@ -92,6 +92,58 @@ class BacktestEngine:
             trailing_stop_distance=pr_config.get('trailingStopDistance')
         )
         
+        # Initialize FinChat client if FinChat slugs are provided
+        finchat_client = None
+        entry_prompt_type = st_config.get('entryPromptType', 'string')
+        exit_prompt_type = st_config.get('exitPromptType', 'string')
+        
+        if entry_prompt_type == 'finchat-slug' or exit_prompt_type == 'finchat-slug':
+            try:
+                from .finchat_client import FinChatClient
+                finchat_client = FinChatClient()
+                logger.info("FinChat client initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize FinChat client: {e}")
+                logger.warning("Continuing without FinChat - will use fallback logic")
+        
+        # Parse strategy logic strings or FinChat COT slugs into executable functions
+        from .strategy_parser import parse_strategy_logic
+        
+        # Convert date strings to datetime objects
+        backtest_start = None
+        backtest_end = None
+        if md_config.get('startDate'):
+            backtest_start = pd.to_datetime(md_config.get('startDate')).to_pydatetime()
+        if md_config.get('endDate'):
+            backtest_end = pd.to_datetime(md_config.get('endDate')).to_pydatetime()
+        
+        entry_func, exit_func = parse_strategy_logic(
+            entry_logic=st_config.get('entryLogic') or st_config.get('entryFinChatPrompt'),
+            exit_logic=st_config.get('exitLogic') or st_config.get('exitFinChatPrompt'),
+            backtest_start=backtest_start,
+            backtest_end=backtest_end,
+            finchat_client=finchat_client,
+            entry_prompt_type=entry_prompt_type,
+            exit_prompt_type=exit_prompt_type,
+            entry_finchat_slug=st_config.get('entryFinChatSlug'),
+            exit_finchat_slug=st_config.get('exitFinChatSlug'),
+            upside_threshold=st_config.get('upsideThreshold'),
+            downside_threshold=st_config.get('downsideThreshold')
+        )
+        
+        # Store FinChat client for async calls
+        self.finchat_client = finchat_client
+        
+        # Set parsed functions if available
+        if entry_func:
+            self.strategy.set_entry_signal_function(entry_func)
+            entry_desc = st_config.get('entryFinChatSlug') or st_config.get('entryLogic') or st_config.get('entryFinChatPrompt')
+            logger.info(f"Using parsed entry logic function: {entry_desc}")
+        if exit_func:
+            self.strategy.set_exit_signal_function(exit_func)
+            exit_desc = st_config.get('exitFinChatSlug') or st_config.get('exitLogic') or st_config.get('exitFinChatPrompt')
+            logger.info(f"Using parsed exit logic function: {exit_desc}")
+        
         # Initialize data fetcher with AlphaVantage MCP client
         from .av_mcp_client import AlphaVantageMCPClient
         try:
@@ -359,13 +411,21 @@ class BacktestEngine:
         positions_to_close = []
         
         for ticker, position in self.portfolio.positions.items():
-            # Check exit conditions
-            should_exit, exit_reason = self.strategy.check_exit_signal(
-                self.market_data,
-                ticker,
-                timestamp,
-                position
-            )
+            # Check exit conditions (use async version if FinChat is enabled)
+            if self.finchat_client:
+                should_exit, exit_reason = await self.strategy.check_exit_signal_async(
+                    self.market_data,
+                    ticker,
+                    timestamp,
+                    position
+                )
+            else:
+                should_exit, exit_reason = self.strategy.check_exit_signal(
+                    self.market_data,
+                    ticker,
+                    timestamp,
+                    position
+                )
             
             if should_exit:
                 positions_to_close.append((ticker, exit_reason))
@@ -450,12 +510,19 @@ class BacktestEngine:
         # Remove tickers we already have positions in
         eligible_tickers = [t for t in eligible_tickers if t not in self.portfolio.positions]
         
-        # Generate entry signals
-        signals = self.strategy.generate_entry_signals(
-            self.market_data,
-            timestamp,
-            eligible_tickers
-        )
+        # Generate entry signals (use async version if FinChat is enabled)
+        if self.finchat_client:
+            signals = await self.strategy.generate_entry_signals_async(
+                self.market_data,
+                timestamp,
+                eligible_tickers
+            )
+        else:
+            signals = self.strategy.generate_entry_signals(
+                self.market_data,
+                timestamp,
+                eligible_tickers
+            )
         
         if not signals:
             return

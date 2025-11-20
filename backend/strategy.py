@@ -56,6 +56,35 @@ class StrategyEngine:
         
         logger.info("Strategy engine initialized")
     
+    async def generate_entry_signals_async(
+        self,
+        market_data: pd.DataFrame,
+        timestamp: datetime,
+        eligible_tickers: List[str]
+    ) -> List[str]:
+        """
+        Generate entry signals for eligible tickers (async version for FinChat)
+        
+        Args:
+            market_data: Market data DataFrame
+            timestamp: Current timestamp
+            eligible_tickers: List of eligible ticker symbols
+        
+        Returns:
+            List of tickers with entry signals
+        """
+        signals = []
+        
+        for ticker in eligible_tickers:
+            try:
+                if await self._check_entry_signal_async(market_data, ticker, timestamp):
+                    signals.append(ticker)
+            except Exception as e:
+                logger.error(f"Error checking entry signal for {ticker}: {str(e)}")
+                continue
+        
+        return signals
+    
     def generate_entry_signals(
         self,
         market_data: pd.DataFrame,
@@ -85,6 +114,35 @@ class StrategyEngine:
         
         return signals
     
+    async def _check_entry_signal_async(
+        self,
+        market_data: pd.DataFrame,
+        ticker: str,
+        timestamp: datetime
+    ) -> bool:
+        """
+        Async version of entry signal check (for FinChat COT calls)
+        """
+        # If custom entry function is provided, check if it's FinChat-based
+        if self.entry_signal_func is not None:
+            # Check if this is a FinChat function
+            if hasattr(self.entry_signal_func, '_is_finchat') and self.entry_signal_func._is_finchat:
+                # Call the async function
+                if hasattr(self.entry_signal_func, '_async_func'):
+                    return await self.entry_signal_func._async_func(market_data, ticker, timestamp)
+            else:
+                # Regular sync function
+                return self.entry_signal_func(market_data, ticker, timestamp)
+        
+        # If entry logic string is provided but no custom function was set,
+        # try default logic (fallback)
+        if self.entry_logic:
+            logger.debug(f"No custom entry function set, using default logic for {ticker}")
+            return self._default_entry_logic(market_data, ticker, timestamp)
+        
+        # No entry logic defined - return False
+        return False
+    
     def _check_entry_signal(
         self,
         market_data: pd.DataFrame,
@@ -101,12 +159,17 @@ class StrategyEngine:
         """
         # If custom entry function is provided, use it
         if self.entry_signal_func is not None:
+            # Check if this is a FinChat function (needs async handling)
+            if hasattr(self.entry_signal_func, '_is_finchat') and self.entry_signal_func._is_finchat:
+                # For FinChat, we need async handling - return False here, will be handled in async version
+                logger.warning("FinChat entry signal detected but called from sync context - use async version")
+                return False
             return self.entry_signal_func(market_data, ticker, timestamp)
         
-        # If entry logic string is provided, parse it
+        # If entry logic string is provided but no custom function was set,
+        # try default logic (fallback)
         if self.entry_logic:
-            # For now, using a simple default logic
-            # In production, this would parse natural language or code
+            logger.debug(f"No custom entry function set, using default logic for {ticker}")
             return self._default_entry_logic(market_data, ticker, timestamp)
         
         # No entry logic defined - return False
@@ -138,6 +201,44 @@ class StrategyEngine:
             return False
         except:
             return False
+    
+    async def check_exit_signal_async(
+        self,
+        market_data: pd.DataFrame,
+        ticker: str,
+        timestamp: datetime,
+        position: 'Position'
+    ) -> Tuple[bool, str]:
+        """
+        Async version of exit signal check (for FinChat COT calls)
+        """
+        # Priority order: Stop Loss -> Take Profit -> Time Exit -> Strategy Exit
+        
+        # 1. Check stop loss
+        if self.stop_loss is not None:
+            if self._check_stop_loss(position):
+                return True, "stop_loss"
+        
+        # 2. Check trailing stop
+        if self.use_trailing_stops and self.trailing_stop_distance is not None:
+            if self._check_trailing_stop(position):
+                return True, "trailing_stop"
+        
+        # 3. Check take profit
+        if self.take_profit is not None:
+            if self._check_take_profit(position):
+                return True, "take_profit"
+        
+        # 4. Check time-based exit
+        if self.time_based_exit is not None:
+            if self._check_time_exit(position, timestamp):
+                return True, "time_exit"
+        
+        # 5. Check strategy exit signal (may be FinChat-based)
+        if await self._check_strategy_exit_async(market_data, ticker, timestamp, position):
+            return True, "strategy_signal"
+        
+        return False, ""
     
     def check_exit_signal(
         self,
@@ -209,6 +310,33 @@ class StrategyEngine:
         days_held = (timestamp - position.entry_timestamp).days
         return days_held >= self.time_based_exit
     
+    async def _check_strategy_exit_async(
+        self,
+        market_data: pd.DataFrame,
+        ticker: str,
+        timestamp: datetime,
+        position: 'Position'
+    ) -> bool:
+        """Async version of strategy exit check (for FinChat COT calls)"""
+        # If custom exit function is provided, check if it's FinChat-based
+        if self.exit_signal_func is not None:
+            # Check if this is a FinChat function
+            if hasattr(self.exit_signal_func, '_is_finchat') and self.exit_signal_func._is_finchat:
+                # Call the async function
+                if hasattr(self.exit_signal_func, '_async_func'):
+                    return await self.exit_signal_func._async_func(market_data, ticker, timestamp, position)
+            else:
+                # Regular sync function
+                return self.exit_signal_func(market_data, ticker, timestamp, position)
+        
+        # If exit logic string is provided but no custom function was set,
+        # try default logic (fallback)
+        if self.exit_logic:
+            logger.debug(f"No custom exit function set, using default logic for {ticker}")
+            return self._default_exit_logic(market_data, ticker, timestamp, position)
+        
+        return False
+    
     def _check_strategy_exit(
         self,
         market_data: pd.DataFrame,
@@ -219,10 +347,17 @@ class StrategyEngine:
         """Check if strategy exit signal is triggered"""
         # If custom exit function is provided, use it
         if self.exit_signal_func is not None:
+            # Check if this is a FinChat function (needs async handling)
+            if hasattr(self.exit_signal_func, '_is_finchat') and self.exit_signal_func._is_finchat:
+                # For FinChat, we need async handling - return False here, will be handled in async version
+                logger.warning("FinChat exit signal detected but called from sync context - use async version")
+                return False
             return self.exit_signal_func(market_data, ticker, timestamp, position)
         
-        # If exit logic string is provided, parse it
+        # If exit logic string is provided but no custom function was set,
+        # try default logic (fallback)
         if self.exit_logic:
+            logger.debug(f"No custom exit function set, using default logic for {ticker}")
             return self._default_exit_logic(market_data, ticker, timestamp, position)
         
         return False

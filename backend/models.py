@@ -17,18 +17,24 @@ class MarketData(BaseModel):
 # --- 2. Strategy Definition ---
 class StrategyDefinition(BaseModel):
     entryLogic: Optional[str] = None
-    entryPromptType: str = "url"  # "url" or "string"
+    entryPromptType: str = "url"  # "url", "string", or "finchat-slug"
     entryFinChatUrl: Optional[str] = None
     entryFinChatPrompt: Optional[str] = None
+    entryFinChatSlug: Optional[str] = None  # FinChat COT slug for entry logic
     
     exitLogic: Optional[str] = None
-    exitPromptType: str = "url"   # "url" or "string"
+    exitPromptType: str = "url"   # "url", "string", or "finchat-slug"
     exitFinChatUrl: Optional[str] = None
     exitFinChatPrompt: Optional[str] = None
+    exitFinChatSlug: Optional[str] = None  # FinChat COT slug for exit logic
     
     takeProfit: Optional[float] = None
     stopLoss: Optional[float] = None
     timeBasedExit: Optional[int] = None
+    
+    # FinChat exit COT thresholds
+    upsideThreshold: Optional[float] = None  # Upside sell threshold percentage
+    downsideThreshold: Optional[float] = None  # Downside sell threshold percentage
     
     positionSizingMethod: Optional[str] = None
     fixedDollarAmount: Optional[float] = None

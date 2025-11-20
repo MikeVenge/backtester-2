@@ -3,7 +3,7 @@ Strategy Parser Module
 Parses natural language strategy descriptions and FinChat COT prompts into executable signal functions
 """
 import re
-from typing import Callable, Optional, Dict
+from typing import Callable, Optional, Dict, List
 import pandas as pd
 from datetime import datetime
 import logging

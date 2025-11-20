@@ -23,7 +23,7 @@ def create_fxy_backtest_config():
                 "fields": ["open", "high", "low", "close", "volume", "adjusted_close"],
                 "frequency": "daily",
                 "startDate": "2025-01-01",
-                "endDate": "2025-03-31",
+                "endDate": "2025-01-15",
                 "includeDividends": True,
                 "includeSplits": True,
                 "includeDelistings": False,
@@ -113,7 +113,7 @@ def submit_backtest():
     print()
     print(f"Railway URL: {RAILWAY_URL}")
     print(f"Ticker: FXY")
-    print(f"Period: 2025-01-01 to 2025-03-31")
+    print(f"Period: 2025-01-01 to 2025-01-15")
     print(f"Entry COT: conditional-stock-purchase")
     print(f"Exit COT: conditional-stock-sell-trigger")
     print()
@@ -191,6 +191,18 @@ def poll_status(job_id, max_wait=600):
                 return True
             elif status == "failed":
                 print(f"\n✗ Backtest failed")
+                # Try to get error details
+                try:
+                    error_response = requests.get(f"{RAILWAY_URL}/backtest_results/{job_id}", timeout=10)
+                    if error_response.status_code == 200:
+                        error_data = error_response.json()
+                        if 'error' in error_data:
+                            print(f"  Error: {error_data['error']}")
+                        if 'error_traceback' in error_data:
+                            print(f"\n  Traceback:")
+                            print(f"  {error_data['error_traceback'][:500]}")
+                except:
+                    pass
                 if 'error' in data:
                     print(f"  Error: {data['error']}")
                 return False

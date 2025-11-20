@@ -45,6 +45,9 @@ class BacktestEngine:
     
     def _initialize_components(self):
         """Initialize all backtest components"""
+        # Initialize FinChat signals tracker early (needed before parse_strategy_logic)
+        self.finchat_signals: List[Dict] = []
+        
         # Market data config
         md_config = self.config.get('marketData', {})
         
@@ -182,9 +185,6 @@ class BacktestEngine:
         # Pending orders (for next-bar-open execution)
         self.pending_entry_orders: List[Dict] = []
         self.pending_exit_orders: List[Dict] = []
-        
-        # Track FinChat COT signals for monitoring
-        self.finchat_signals: List[Dict] = []
     
     async def run(self) -> Dict:
         """

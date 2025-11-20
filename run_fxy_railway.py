@@ -34,10 +34,10 @@ def create_fxy_backtest_config():
                 "entryFinChatSlug": "conditional-stock-purchase",
                 "exitPromptType": "finchat-slug",
                 "exitFinChatSlug": "conditional-stock-sell-trigger",
-                "upsideThreshold": 10.0,
-                "downsideThreshold": 5.0,
-                "positionSizingMethod": "fixed-shares",
-                "fixedDollarAmount": 10000.0,  # 10,000 shares per buy order
+                "upsideThreshold": 0.01,  # 0.01 = 1% as decimal
+                "downsideThreshold": 0.01,  # 0.01 = 1% as decimal
+                "positionSizingMethod": "fixed-dollar",
+                "fixedDollarAmount": 10000.0,  # $10,000 notional per trade
                 "maxPositions": 1,
                 "eligibleSymbols": "FXY",
                 "takeProfit": None,
@@ -59,7 +59,7 @@ def create_fxy_backtest_config():
                 "maxWeeklyDrawdown": None
             },
             "tradingExecution": {
-                "entryTiming": "next-bar-open",
+                "entryTiming": "same-bar-close",  # Execute at close of signal bar
                 "orderType": "market",
                 "commissionType": "per-trade",
                 "commissionAmount": 1.0,

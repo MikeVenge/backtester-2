@@ -252,40 +252,12 @@ class StrategyParser:
                 return cot_cache[cache_key].get("signal", False)
             
             try:
-                # Get yesterday's price from market data
-                yesterday_price = None
-                try:
-                    ticker_data = market_data.xs(ticker, level='ticker')
-                    # Get all timestamps before current timestamp
-                    past_timestamps = ticker_data[ticker_data.index < timestamp].index.tolist()
-                    if past_timestamps:
-                        # Get the most recent timestamp before today
-                        yesterday_timestamp = max(past_timestamps)
-                        yesterday_row = ticker_data.loc[yesterday_timestamp]
-                        # Try to get close price, fallback to adjusted_close
-                        yesterday_price = yesterday_row.get('close') or yesterday_row.get('adjusted_close')
-                        if pd.isna(yesterday_price):
-                            yesterday_price = None
-                except Exception as e:
-                    logger.warning(f"Could not get yesterday's price for {ticker}: {e}")
-                    # If we can't get yesterday's price, use entry price as fallback
-                    yesterday_price = position.entry_price
+                # Format date as mm/dd/yyyy for FinChat COT
+                date_str = timestamp.strftime("%m/%d/%Y")
                 
-                # Get today's price (current price)
-                todays_price = position.current_price
-                
-                # Use thresholds from config, or calculate from entry price if not provided
-                upside_thresh = upside_threshold
-                downside_thresh = downside_threshold
-                
-                # If thresholds not provided, use takeProfit/stopLoss if available
-                # Or calculate reasonable defaults (e.g., 10% upside, 5% downside)
-                if upside_thresh is None:
-                    # Could use takeProfit if available, or default
-                    upside_thresh = 10.0  # Default 10% upside threshold
-                if downside_thresh is None:
-                    # Could use stopLoss if available, or default
-                    downside_thresh = 5.0  # Default 5% downside threshold
+                # Use thresholds from config, default to 0.01 if not provided
+                upside_thresh = upside_threshold if upside_threshold is not None else 0.01
+                downside_thresh = downside_threshold if downside_threshold is not None else 0.01
                 
                 # Call FinChat COT with required parameters
                 logger.info(f"Calling FinChat COT {cot_slug} for exit signal: {ticker} at {timestamp}")
@@ -294,10 +266,9 @@ class StrategyParser:
                     ticker=ticker,  # Will be mapped to stock_symbol in run_cot
                     additional_params={
                         "stock_symbol": ticker,  # Required parameter name
-                        "yesterdays_price": str(yesterday_price) if yesterday_price else str(position.entry_price),
-                        "todays_price": str(todays_price),
-                        "upside_threshold%": f"{upside_thresh}%",
-                        "downside_threshold%": f"{downside_thresh}%"
+                        "date": date_str,  # Date in mm/dd/yyyy format
+                        "upside_threshold": str(upside_thresh),  # As decimal (e.g., "0.01" for 1%)
+                        "downside_threshold": str(downside_thresh)  # As decimal (e.g., "0.01" for 1%)
                     }
                 )
                 
@@ -309,14 +280,12 @@ class StrategyParser:
                 
                 # Log detailed information
                 print(f"\n{'='*80}")
-                print(f"EXIT SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')}")
+                print(f"EXIT SIGNAL - {ticker} @ {timestamp.strftime('%Y-%m-%d')} ({date_str})")
                 print(f"{'='*80}")
                 print(f"COT Slug: {cot_slug}")
+                print(f"Parameters: stock_symbol={ticker}, date={date_str}, upside_threshold={upside_thresh}, downside_threshold={downside_thresh}")
                 print(f"Position Entry: {position.entry_timestamp.strftime('%Y-%m-%d')} @ ${position.entry_price:.2f}")
-                print(f"Yesterday Price: ${yesterday_price:.2f}")
-                print(f"Today Price: ${todays_price:.2f}")
-                print(f"Upside Threshold: {upside_thresh}%")
-                print(f"Downside Threshold: {downside_thresh}%")
+                print(f"Current Price: ${position.current_price:.2f}")
                 print(f"Signal: {signal.upper()}")
                 print(f"Confidence: {confidence:.2f}")
                 print(f"\nCOT Response Content:")
@@ -334,11 +303,11 @@ class StrategyParser:
                         "type": "exit",
                         "ticker": ticker,
                         "timestamp": timestamp.isoformat(),
+                        "date": date_str,  # Date in mm/dd/yyyy format
                         "cot_slug": cot_slug,
                         "position_entry_date": position.entry_timestamp.isoformat(),
                         "position_entry_price": position.entry_price,
-                        "yesterday_price": float(yesterday_price) if yesterday_price else None,
-                        "today_price": float(todays_price),
+                        "current_price": float(position.current_price),
                         "upside_threshold": upside_thresh,
                         "downside_threshold": downside_thresh,
                         "signal": signal,

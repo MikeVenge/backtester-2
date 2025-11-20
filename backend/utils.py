@@ -128,19 +128,126 @@ def get_execution_price(
 def is_trading_day(timestamp: datetime, trading_days: list) -> bool:
     """
     Check if timestamp falls on an allowed trading day
+    Automatically skips weekends (Saturday and Sunday) and US market holidays
     
     Args:
         timestamp: Datetime to check
         trading_days: List of allowed weekday names (e.g., ["Monday", "Tuesday"])
+                      If empty, defaults to Monday-Friday excluding holidays
     
     Returns:
         True if trading is allowed on this day
     """
-    if not trading_days:
-        return True
+    # Always skip weekends (Saturday = 5, Sunday = 6)
+    weekday = timestamp.weekday()
+    if weekday >= 5:  # Saturday or Sunday
+        return False
     
-    weekday_name = timestamp.strftime("%A")
-    return weekday_name in trading_days
+    # Check if it's a US market holiday
+    if _is_us_market_holiday(timestamp):
+        return False
+    
+    # If trading_days list is specified, check if this weekday is allowed
+    if trading_days:
+        weekday_name = timestamp.strftime("%A")
+        return weekday_name in trading_days
+    
+    # Default: allow Monday-Friday (already checked weekends above)
+    return True
+
+
+def _is_us_market_holiday(date: datetime) -> bool:
+    """
+    Check if a date is a US market holiday
+    
+    Args:
+        date: Datetime to check
+    
+    Returns:
+        True if it's a US market holiday
+    """
+    year = date.year
+    month = date.month
+    day = date.day
+    weekday = date.weekday()
+    
+    # New Year's Day (January 1, or Monday if Jan 1 is Sunday, or Friday if Jan 1 is Saturday)
+    if month == 1:
+        if day == 1:
+            return True
+        if day == 2 and weekday == 0:  # Monday if Jan 1 is Sunday
+            return True
+        if day == 31 and weekday == 4:  # Friday if Jan 1 is Saturday (previous year)
+            return True
+    
+    # Martin Luther King Jr. Day (third Monday in January)
+    if month == 1:
+        # Find third Monday
+        first_monday = 1 + (7 - (date.replace(day=1).weekday())) % 7
+        third_monday = first_monday + 14
+        if day == third_monday:
+            return True
+    
+    # Presidents' Day (third Monday in February)
+    if month == 2:
+        first_monday = 1 + (7 - (date.replace(day=1).weekday())) % 7
+        third_monday = first_monday + 14
+        if day == third_monday:
+            return True
+    
+    # Good Friday (Friday before Easter - simplified, approximate)
+    # Note: This is a simplified check. Full Easter calculation is complex.
+    # For now, we'll skip this and let users specify holidays if needed.
+    
+    # Memorial Day (last Monday in May)
+    if month == 5:
+        # Find last Monday
+        last_day = 31
+        last_monday = last_day - ((last_day - date.replace(day=last_day).weekday()) % 7)
+        if day == last_monday:
+            return True
+    
+    # Juneteenth (June 19, or Monday if June 19 is Sunday, or Friday if June 19 is Saturday)
+    if month == 6:
+        if day == 19:
+            return True
+        if day == 20 and weekday == 0:  # Monday if June 19 is Sunday
+            return True
+        if day == 18 and weekday == 4:  # Friday if June 19 is Saturday
+            return True
+    
+    # Independence Day (July 4, or Monday if July 4 is Sunday, or Friday if July 4 is Saturday)
+    if month == 7:
+        if day == 4:
+            return True
+        if day == 5 and weekday == 0:  # Monday if July 4 is Sunday
+            return True
+        if day == 3 and weekday == 4:  # Friday if July 4 is Saturday
+            return True
+    
+    # Labor Day (first Monday in September)
+    if month == 9:
+        first_monday = 1 + (7 - (date.replace(day=1).weekday())) % 7
+        if day == first_monday:
+            return True
+    
+    # Thanksgiving (fourth Thursday in November)
+    if month == 11:
+        first_thursday = 1 + (3 - (date.replace(day=1).weekday())) % 7
+        fourth_thursday = first_thursday + 21
+        if day == fourth_thursday:
+            return True
+    
+    # Christmas (December 25, or Monday if Dec 25 is Sunday, or Friday if Dec 25 is Saturday)
+    if month == 12:
+        if day == 25:
+            return True
+        if day == 26 and weekday == 0:  # Monday if Dec 25 is Sunday
+            return True
+        if day == 24 and weekday == 4:  # Friday if Dec 25 is Saturday
+            return True
+    
+    return False
 
 
 def calculate_atr(prices: list, period: int = 14) -> float:

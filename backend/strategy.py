@@ -403,7 +403,14 @@ class StrategyEngine:
         Returns:
             Number of shares to buy
         """
-        if self.position_sizing_method == "fixed-dollar":
+        if self.position_sizing_method == "fixed-shares":
+            # Fixed number of shares per order
+            if self.fixed_dollar_amount is None:
+                logger.error("Fixed shares amount not specified (use fixedDollarAmount field)")
+                return 0.0
+            shares = self.fixed_dollar_amount  # In this mode, fixedDollarAmount represents shares
+        
+        elif self.position_sizing_method == "fixed-dollar":
             if self.fixed_dollar_amount is None:
                 logger.error("Fixed dollar amount not specified")
                 return 0.0
@@ -431,7 +438,9 @@ class StrategyEngine:
             return 0.0
         
         # Round down to avoid fractional shares (unless fractional trading allowed)
-        shares = int(shares)
+        # Skip rounding for fixed-shares method since it's already an integer
+        if self.position_sizing_method != "fixed-shares":
+            shares = int(shares)
         
         return shares
     

@@ -36,8 +36,8 @@ def create_fxy_backtest_config():
                 "exitFinChatSlug": "conditional-stock-sell-trigger",
                 "upsideThreshold": 10.0,
                 "downsideThreshold": 5.0,
-                "positionSizingMethod": "portfolio-percent",
-                "portfolioPercent": 100.0,
+                "positionSizingMethod": "fixed-shares",
+                "fixedDollarAmount": 10000.0,  # 10,000 shares per buy order
                 "maxPositions": 1,
                 "eligibleSymbols": "FXY",
                 "takeProfit": None,

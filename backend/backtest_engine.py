@@ -493,12 +493,16 @@ class BacktestEngine:
     
     async def _process_entries(self, timestamp: datetime, current_data: pd.DataFrame):
         """Process entry signals for new positions"""
+        logger.debug(f"Processing entries at {timestamp}, current positions: {len(self.portfolio.positions)}, max: {self.strategy.max_positions}")
+        
         # Check if we can open new positions
         if self.portfolio.trading_halted:
+            logger.debug(f"Trading halted, skipping entries")
             return
         
         if self.strategy.max_positions is not None:
             if len(self.portfolio.positions) >= self.strategy.max_positions:
+                logger.debug(f"Max positions reached ({len(self.portfolio.positions)}/{self.strategy.max_positions}), skipping entries")
                 return
         
         # Get all tickers
@@ -528,7 +532,10 @@ class BacktestEngine:
                 eligible_tickers
             )
         
+        logger.info(f"Generated {len(signals)} entry signals at {timestamp}: {signals}")
+        
         if not signals:
+            logger.debug(f"No entry signals generated at {timestamp}")
             return
         
         # Rank signals if more than available slots
